@@ -1,10 +1,5 @@
 from flask import Flask, request, jsonify, render_template_string
-import os
-import json
-import hashlib
-import secrets
-import string
-import time
+import os, json, hashlib, secrets, string, time
 
 app = Flask(__name__)
 
