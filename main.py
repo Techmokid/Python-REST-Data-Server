@@ -68,16 +68,16 @@ def edit_data():
     if id==None or key==None or val==None or timestamp==None or provided_hash==None:
         return jsonify({'message': f'At least one parameter was missing from the request'}), 403
 
+    data_file = os.path.join(DATA_DIR, f"KEYVAL{id}.json")
+    if not os.path.exists(data_file):
+        return jsonify({'message': f'ID {id} does not exist in the system yet'}), 403
+
     if abs(int(timestamp)-getTimestamp()) > MAX_TIMESTAMP_OFFSET:
         return jsonify({'message': f'The timestamp was too far out from the server time'}), 403
     
     if not verify_hash(id, paramHashData, provided_hash):
         return jsonify({'message': 'Hash verification failed'}), 403
     
-    data_file = os.path.join(DATA_DIR, f"KEYVAL{id}.json")
-    if not os.path.exists(data_file):
-        return jsonify({'message': f'ID {id} does not exist in the system yet'}), 403
-
     # Load existing data
     with open(data_file, 'r') as f:
         data = json.load(f)
