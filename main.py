@@ -1,8 +1,49 @@
 from flask import Flask, request, jsonify, render_template_string
-import os, json, hashlib, secrets, string, time
+import os, json, hashlib, secrets, string, time, socket, struct, threading
 
 app = Flask(__name__)
 
+
+# Handle multicast server
+MULTICAST_GROUP = '224.0.0.0'
+MULTICAST_PORT = 5007
+
+def get_local_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(('8.8.8.8', 1))  # Use Google's DNS to determine the local IP address
+        ip = s.getsockname()[0]
+    except Exception:
+        ip = '127.0.0.1'  # Default to localhost if unable to determine
+    finally:
+        s.close()
+    return ip
+
+def multicast_server():
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind(('', MULTICAST_PORT))  # Bind to all interfaces
+
+    local_ip = get_local_ip()
+    print(f"Local IP: {local_ip}")
+
+    mreq = struct.pack("4s4s", socket.inet_aton(MULTICAST_GROUP), socket.inet_aton(local_ip))
+    sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+
+    print(f"Listening for multicast messages on {MULTICAST_GROUP}:{MULTICAST_PORT}")
+
+    while True:
+        data, address = sock.recvfrom(1024)
+        if data.decode('utf-8') == 'DISCOVER_SERVER':
+            response = json.dumps({'ip': local_ip})
+            sock.sendto(response.encode('utf-8'), address)
+            print(f"Responded to {address} with IP {local_ip}")
+
+# Start the multicast server in a separate thread
+multicast_thread = threading.Thread(target=multicast_server, daemon=True)
+multicast_thread.start()
+
+# Handle Main API Server
 MAX_TIMESTAMP_OFFSET = 30
 DATA_DIR = "Stored API Data/"
 KEYS_DIR = "Stored API Keys/"
