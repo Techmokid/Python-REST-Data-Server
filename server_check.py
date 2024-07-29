@@ -1,15 +1,20 @@
-print("Checking for pip...")
-import ensurepip
-import pip
-ensurepip.bootstrap()
-print("Pip discovered. Installing packages")
+import subprocess, os, sys
 def pipInstall(package):
-    pip.main(['install', package])
-pipInstall("requests")
-pipInstall("colorama")
+    with open(os.devnull, 'w') as fnull:
+        result = subprocess.run([sys.executable, '-m', 'pip', 'install', package],
+                                stdout=fnull, stderr=subprocess.PIPE, text=True)
+        if result.returncode != 0:
+            print(f"Error installing package {package}: {result.stderr}")
 
-import os
-os.system("cls")
+try:
+    import requests
+except:
+    pipInstall("requests")
+
+try:
+    import colorama
+except:
+    pipInstall("colorama")
 
 import requests
 import hashlib
@@ -193,4 +198,3 @@ def test_api():
 if __name__ == "__main__":
     discover_server()
     test_api()
-    input()

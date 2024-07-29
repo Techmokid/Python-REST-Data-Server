@@ -43,6 +43,27 @@ def multicast_server():
 multicast_thread = threading.Thread(target=multicast_server, daemon=True)
 multicast_thread.start()
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Handle Main API Server
 MAX_TIMESTAMP_OFFSET = 30
 DATA_DIR = "Stored API Data/"
@@ -174,5 +195,80 @@ def get_data():
 
     return "Error", 404
 
-if __name__ == '__main__':
+def runMainServer():
     app.run(host='0.0.0.0', port=80)
+
+main_server_thread = threading.Thread(target=runMainServer, daemon=True)
+main_server_thread.start()
+
+
+
+
+
+
+
+
+
+
+
+
+import subprocess
+def run_server_checks():
+    process = subprocess.Popen(
+        ["python", "server_check.py"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1
+    )
+
+    all_passed = True
+
+    while True:
+        line = process.stdout.readline()
+        if not line:
+            break
+        print(line, end='')  # Print the line as it comes in
+        if "RAW ATTEMPT OUTPUT: " in line and "PASS" not in line:
+            all_passed = False
+            process.kill()  # Terminate the subprocess
+            break
+        if "Get new ID:" in line:
+            id = line.split(": ")[3].split(" ")[0]
+            DataPath = DATA_DIR + "KEYVAL" + id + ".json"
+            KeysPath = KEYS_DIR + id + ".key"
+            print("\n\n")
+            print("DETECTED ID: " + id)
+            print("Must remove path: " + DataPath)
+            os.remove(DataPath)
+            print("Must remove path: " + KeysPath)
+            os.remove(KeysPath)
+            print("\n\n")
+
+    process.stdout.close()
+    process.wait()
+
+    if all_passed:
+        print("All tests passed.")
+    else:
+        print("Some tests failed. Exiting.")
+        exit()
+
+
+run_server_checks()
+while True:
+    continue
+
+#multicast_thread.stop()
+#main_server_thread.stop()
+
+
+
+
+
+
+
+
+
+
+
