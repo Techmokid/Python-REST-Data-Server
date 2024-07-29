@@ -1,3 +1,16 @@
+print("Checking for pip...")
+import ensurepip
+import pip
+ensurepip.bootstrap()
+print("Pip discovered. Installing packages")
+def pipInstall(package):
+    pip.main(['install', package])
+pipInstall("requests")
+pipInstall("colorama")
+
+import os
+os.system("cls")
+
 import requests
 import hashlib
 import time
@@ -27,7 +40,7 @@ def discover_server():
         response = json.loads(data.decode('utf-8'))
         SERVER_ADDRESS = 'http://' + response['ip']
     except socket.timeout:
-        print("No multicast response received")
+        print("No multicast response received. Falling back on default localhost\n")
     except OSError as e:
         print(f"Socket error: {e}")
 
@@ -85,7 +98,7 @@ def print_result(test, result, details=""):
     origColor = Fore.WHITE
     resultCol = Fore.GREEN if result else Fore.RED
     testCol = Fore.GREEN if test else Fore.RED
-    print(f"[RESULT: {resultCol}{'SUCCESS' if result else 'FAILURE'}{origColor}] [TEST: {testCol}{'SUCCESS' if test else 'FAILURE'}{origColor}] {details}{Style.RESET_ALL}")
+    print(f"[RAW ATTEMPT OUTPUT: {resultCol}{'SUCCESS' if result else 'FAILURE'}{origColor}] [TEST RESULTS: {testCol}{'PASS' if test else 'FAIL'}{origColor}] {details}{Style.RESET_ALL}")
     
 def test_api():
     # Create a new ID
@@ -160,7 +173,24 @@ def test_api():
     else:
         print_result(True, False, "Get data: Accessing restricted data without proper access parameters")
 
+    # Attempt to set restricted variable name
+    response = requests.get(f"{SERVER_ADDRESS}/editData?id={id}&key=ClientLatestDataUpdate&val=17&timestamp={timestamp}&hash=wronghash")
+    if response.status_code == 200:
+        print_result(False, True, "Edit data: Setting forbidden / restricted variable name")
+    else:
+        print_result(True, False, "Edit data: Setting forbidden / restricted variable name")
+
+    # Finally finish with functioning response
+    print("\nFinal restricted data case:")
+    hashVal = generate_hash(id, f"id={id}&key=FinalClientTest&val=True&timestamp={timestamp}", hash_key)
+    response = requests.get(f"{SERVER_ADDRESS}/editData?id={id}&key=FinalClientTest&val=True&timestamp={timestamp}&hash={hashVal}")
+    if response.status_code == 200:
+        print_result(True, True, "Edit data: Correctly formatted restricted value change")
+    else:
+        print_result(False, False, "Edit data: Correctly formatted restricted value change")
+
 
 if __name__ == "__main__":
     discover_server()
     test_api()
+    input()

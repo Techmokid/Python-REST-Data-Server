@@ -83,7 +83,7 @@ def new_id():
         filename = os.path.join(DATA_DIR, f"KEYVAL{id}.json")
         if not os.path.exists(filename):
             with open(filename, 'w') as f:
-                json.dump({}, f)
+                json.dump({"last_communication": getTimestamp()}, f)
             with open(os.path.join(KEYS_DIR, f"{id}.key"), 'w') as f:
                 f.write(hash_key)
             break
@@ -100,6 +100,9 @@ def edit_data():
     provided_hash = request.args.get('hash')
     paramHashData = request.query_string.decode('utf-8')[:request.query_string.decode('utf-8').rfind('&')]
 
+    if key == "ClientLatestDataUpdate":
+        return jsonify({'message': 'Forbidden variable name due to internal server use'}), 403
+    
     if id==None or key==None or val==None or timestamp==None or provided_hash==None:
         return jsonify({'message': f'At least one parameter was missing from the request'}), 403
 
@@ -117,6 +120,7 @@ def edit_data():
         data = json.load(f)
 
     data[key] = val
+    data["ClientLatestDataUpdate"] = getTimestamp()  # Update last communication timestamp
 
     with open(data_file, 'w') as f:
         json.dump(data, f)
