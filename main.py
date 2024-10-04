@@ -1,13 +1,49 @@
 from flask import Flask, request, jsonify, render_template_string
 import os, json, hashlib, secrets, string, time, socket, struct, threading
 from datetime import datetime
+import logging
 
 app = Flask(__name__)
+
+# If you want to introduce API rate limits, uncomment this code
+#from flask_limiter import Limiter
+#limiter = Limiter(app, key_func=get_remote_address)
+
+MAX_TIMESTAMP_OFFSET = 30
+
+DATA_DIR = "Stored API Data/"
+KEYS_DIR = "Stored API Keys/"
+LOGS_DIR = "Logs/"
+
+if not os.path.exists(DATA_DIR):
+    os.makedirs(DATA_DIR)
+if not os.path.exists(KEYS_DIR):
+    os.makedirs(KEYS_DIR)
+if not os.path.exists(LOGS_DIR):
+    os.makedirs(LOGS_DIR)
+
 now = datetime.now()
+LOG_FILE = LOGS_DIR + now.strftime("%Y-%m-%d %H;%M;%S") + ".log"
+if os.path.exists(LOG_FILE):
+    os.remove(LOG_FILE)
+
+logging.basicConfig(filename=LOG_FILE, level=logging.INFO)
+
+def writeToLogFile(stringToSave):
+    logging.info(stringToSave)
+writeToLogFile("Starting up...")
+
+
+
+
+
+
 
 # Handle multicast server
 MULTICAST_GROUP = '224.0.0.0'
 MULTICAST_PORT = 5007
+
+stop_event = threading.Event()
 
 def get_local_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -22,6 +58,7 @@ def get_local_ip():
 
 def multicast_server():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    #sock.settimeout(5)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind(('', MULTICAST_PORT))  # Bind to all interfaces
 
@@ -33,12 +70,15 @@ def multicast_server():
 
     print(f"Listening for multicast messages on {MULTICAST_GROUP}:{MULTICAST_PORT}")
 
-    while True:
-        data, address = sock.recvfrom(1024)
-        if data.decode('utf-8') == 'DISCOVER_SERVER':
-            response = json.dumps({'ip': local_ip})
-            sock.sendto(response.encode('utf-8'), address)
-            print(f"Responded to {address} with IP {local_ip}")
+    while not stop_event.is_set():
+        try:
+            data, address = sock.recvfrom(1024)
+            if data.decode('utf-8') == 'DISCOVER_SERVER':
+                response = json.dumps({'ip': local_ip})
+                sock.sendto(response.encode('utf-8'), address)
+                print(f"Responded to {address} with IP {local_ip}")
+        except socket.timeout:
+            continue
 
 # Start the multicast server in a separate thread
 multicast_thread = threading.Thread(target=multicast_server, daemon=True)
@@ -50,44 +90,7 @@ multicast_thread.start()
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # Handle Main API Server
-MAX_TIMESTAMP_OFFSET = 30
-
-DATA_DIR = "Stored API Data/"
-KEYS_DIR = "Stored API Keys/"
-LOGS_DIR = "Logs/"
-
-LOG_SESSION_NAME = LOGS_DIR + now.strftime("%Y-%m-%d %H;%M;%S") + ".txt"
-print(LOG_SESSION_NAME)
-
-if not os.path.exists(DATA_DIR):
-    os.makedirs(DATA_DIR)
-if not os.path.exists(KEYS_DIR):
-    os.makedirs(KEYS_DIR)
-if not os.path.exists(LOGS_DIR):
-    os.makedirs(LOGS_DIR)
-if os.path.exists(LOG_SESSION_NAME):
-    os.remove(LOG_SESSION_NAME)
-LogFile = open(LOG_SESSION_NAME,'w+')
-LogFile.write("Started")
-LogFile.write("Hello")
-LogFile.close()
-
 def verify_hash(id, paramString, provided_hash):
     with open(os.path.join(KEYS_DIR,f"{id}.key"),'r') as f:
         local_key = f.read().strip()
@@ -212,6 +215,9 @@ def get_data():
 def runMainServer():
     app.run(host='0.0.0.0', port=80)
 
+def shutdown():
+    stop_event.set()
+    
 main_server_thread = threading.Thread(target=runMainServer, daemon=True)
 main_server_thread.start()
 
@@ -267,14 +273,15 @@ def run_server_checks():
     else:
         print("Some tests failed. Exiting.")
         exit()
-
-
+    
 run_server_checks()
-while True:
-    continue
-
-#multicast_thread.stop()
-#main_server_thread.stop()
+try:
+    while True:
+        time.sleep(1)  # Keep the main thread alive
+except KeyboardInterrupt:
+    logging.info("Server shutting down...")
+    shutdown()
+    logging.info("Server Offline")
 
 
 
