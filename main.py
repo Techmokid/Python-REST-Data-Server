@@ -1,8 +1,9 @@
 from flask import Flask, request, jsonify, render_template_string
 import os, json, hashlib, secrets, string, time, socket, struct, threading
+from datetime import datetime
 
 app = Flask(__name__)
-
+now = datetime.now()
 
 # Handle multicast server
 MULTICAST_GROUP = '224.0.0.0'
@@ -66,13 +67,26 @@ multicast_thread.start()
 
 # Handle Main API Server
 MAX_TIMESTAMP_OFFSET = 30
+
 DATA_DIR = "Stored API Data/"
 KEYS_DIR = "Stored API Keys/"
+LOGS_DIR = "Logs/"
+
+LOG_SESSION_NAME = LOGS_DIR + now.strftime("%Y-%m-%d %H;%M;%S") + ".txt"
+print(LOG_SESSION_NAME)
 
 if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR)
 if not os.path.exists(KEYS_DIR):
     os.makedirs(KEYS_DIR)
+if not os.path.exists(LOGS_DIR):
+    os.makedirs(LOGS_DIR)
+if os.path.exists(LOG_SESSION_NAME):
+    os.remove(LOG_SESSION_NAME)
+LogFile = open(LOG_SESSION_NAME,'w+')
+LogFile.write("Started")
+LogFile.write("Hello")
+LogFile.close()
 
 def verify_hash(id, paramString, provided_hash):
     with open(os.path.join(KEYS_DIR,f"{id}.key"),'r') as f:
