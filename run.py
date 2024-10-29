@@ -1,5 +1,5 @@
 # main_script.py
-import threading, time, logging, subprocess, os
+import threading, time, logging, subprocess, os, shutil
 from api_server import run as run_api_server
 from multicast_server import *
 
@@ -15,6 +15,7 @@ multicast_thread.start()
 
 DATA_DIR = "Stored API Data/"
 KEYS_DIR = "Stored API Keys/"
+CLIENT_DIR = "Client FTP/"
 LOGS_DIR = "Logs/"
 def run_server_checks():
     process = subprocess.Popen(
@@ -40,12 +41,15 @@ def run_server_checks():
             id = line.split(": ")[3].split(" ")[0]
             DataPath = DATA_DIR + "KEYVAL" + id + ".json"
             KeysPath = KEYS_DIR + id + ".key"
+            ClientPath = CLIENT_DIR + "Client_" + id + "/"
             print("\n\n")
             print("DETECTED ID: " + id)
             print("Must remove path: " + DataPath)
-            os.remove(DataPath)
             print("Must remove path: " + KeysPath)
+            print("Must remove path: " + ClientPath)
+            os.remove(DataPath)
             os.remove(KeysPath)
+            shutil.rmtree(ClientPath)
             print("\n\n")
 
     process.stdout.close()

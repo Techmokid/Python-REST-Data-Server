@@ -95,7 +95,8 @@ def get_data(id, timestamp=None, hash_key=None):
 
 
 # Annoyingly, windows requires a "color" call before it will display ANSI color codes.
-# Excluding this nukes windows ability for color. Windows specific issue, linux does not suffer from this stupidness
+# Excluding this nukes windows ability for color. Windows specific issue, linux does not suffer from this stupidity
+# I hate windows so much sometimes...
 import os
 os.system('color')
 
