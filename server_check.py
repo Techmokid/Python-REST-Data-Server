@@ -49,7 +49,7 @@ def discover_server():
     except OSError as e:
         print(f"Socket error: {e}")
 
-def generate_hash(id, params, key):
+def generate_hash(params, key):
     data_to_hash = key + params
     hash_object = hashlib.sha256(data_to_hash.encode())
     return hash_object.hexdigest()
@@ -72,10 +72,18 @@ def get_timestamp():
 
 def edit_data(id, key, val, timestamp, hash_key):
     params = f"id={id}&key={key}&val={val}&timestamp={timestamp}"
-    provided_hash = generate_hash(id, params, hash_key)
-    response = requests.get(f"{SERVER_ADDRESS}/editData?{params}&hash={provided_hash}")
+    calculated_hash = generate_hash(params, hash_key)
+    data = {
+        'id': id,
+        'key': key,
+        'val': val,
+        'timestamp': timestamp,
+        'hash': calculated_hash
+    }
+    
+    response = requests.post("http://localhost:80/editData", data=data)
     #print("Edit Data Response:", response.status_code, response.text)
-    return response.status_code
+    return response
 
 def get_data(id, timestamp=None, hash_key=None):
     if id is None:
@@ -85,11 +93,11 @@ def get_data(id, timestamp=None, hash_key=None):
             response = requests.get(f"{SERVER_ADDRESS}/getData?id={id}")
         else:
             params = f"id={id}&timestamp={timestamp}"
-            provided_hash = generate_hash(id, params, hash_key)
+            provided_hash = generate_hash(params, hash_key)
             response = requests.get(f"{SERVER_ADDRESS}/getData?{params}&hash={provided_hash}")
     
     #print("Get Data Response:", response.status_code, response.text)
-    return response.status_code
+    return response
 
 
 
@@ -117,6 +125,11 @@ def test_api():
     id = id_info['id']
     hash_key = id_info['hash_key']
     print_result(True, True, f"Get new ID: {id} with hashkey {hash_key}")
+
+
+
+
+
     
     # Get the current timestamp
     timestamp = get_timestamp()
@@ -126,76 +139,96 @@ def test_api():
     print_result(True,True,  f"Get server timestamp: {timestamp}")
     
     # Edit data for the new ID
-    if edit_data(id, "exampleKey", "exampleValue", timestamp, hash_key) == 200:
+    if edit_data(id, "exampleKey", "exampleValue", timestamp, hash_key).status_code == 200:
         print_result(True, True, "Edit data")
     else:
         print_result(False, False, "Edit data")
     
     # Attempt to retrieve the data
-    if get_data(id) == 200:
+    if get_data(id).status_code == 200:
         print_result(True, True, "Get data")
     else:
         print_result(False, False, "Get data")
 
-    if edit_data(id, "DataAccessLevel", "Restricted", timestamp, hash_key) == 200:
+    if edit_data(id, "RestrictAccess", "True", timestamp, hash_key).status_code == 200:
         print_result(True, True, "Set data to restricted access")
     else:
         print_result(False, False, "Set data to restricted access")
+
+    params = f"id={id}&key=FinalClientTest&val=True&timestamp={timestamp}"
+    hashVal = generate_hash(params, hash_key)
+    response = requests.get(f"{SERVER_ADDRESS}/getData?{params}&hash={hashVal}")
+    if response.status_code == 200:
+        print_result(True, True, "Get restricted data: " + str(response.text.strip()))
+    else:
+        print_result(False, False, "Get restricted data: " + str(response.text.strip()))
+
+
+
+
+        
     
     # Simulate error cases
     print("\nSimulating Error Cases:")
-    response = requests.get(f"{SERVER_ADDRESS}/editData?id={id}&key=exampleKey")
+    params_dict = {
+        'id': id,
+        'key': 'exampleKey'
+    }
+    response = requests.post(f"{SERVER_ADDRESS}/editData",data=params_dict)
     if response.status_code == 200:
-        print_result(False, True, "Edit data: Missing Parameters")
+        print_result(False, True, "Edit data: Missing Parameters: " + str(response.text.strip()))
     else:
-        print_result(True, False, "Edit data: Missing Parameters")
+        print_result(True, False, "Edit data: Missing Parameters: " + str(response.text.strip()))
     
     # Non-existent ID in editData
-    response = requests.get(f"{SERVER_ADDRESS}/editData?id=99999&key=exampleKey&val=exampleValue&timestamp={timestamp}&hash=wronghash")
+    response = edit_data(99999,'exampleKey','exampleValue',timestamp,'wronghash')
     if response.status_code == 200:
-        print_result(False, True, "Edit data: Non-existent ID")
+        print_result(False, True, "Edit data: Non-existent ID: " + str(response.text.strip()))
     else:
-        print_result(True, False, "Edit data: Non-existent ID")
+        print_result(True, False, "Edit data: Non-existent ID: " + str(response.text.strip()))
     
     # Incorrect hash in editData
-    response = requests.get(f"{SERVER_ADDRESS}/editData?id={id}&key=exampleKey&val=exampleValue&timestamp={timestamp}&hash=wronghash")
+    response = edit_data(id,'exampleKey','exampleValue',timestamp,'wronghash')
     if response.status_code == 200:
-        print_result(False, True, "Edit data: Incorrect hash")
+        print_result(False, True, "Edit data: Incorrect hash: " + str(response.text.strip()))
     else:
-        print_result(True, False, "Edit data: Incorrect hash")
+        print_result(True, False, "Edit data: Incorrect hash: " + str(response.text.strip()))
     
     # Outdated timestamp in editData
     outdated_timestamp = timestamp - 100
-    response = requests.get(f"{SERVER_ADDRESS}/editData?id={id}&key=exampleKey&val=exampleValue&timestamp={outdated_timestamp}&hash={generate_hash(id, f'id={id}&key=exampleKey&val=exampleValue&timestamp={outdated_timestamp}', hash_key)}")
+    response = edit_data(id,'exampleKey','exampleValue',outdated_timestamp,hash_key)
     if response.status_code == 200:
-        print_result(False, True, "Edit data: Outdated timestamp")
+        print_result(False, True, "Edit data: Outdated timestamp: " + str(response.text.strip()))
     else:
-        print_result(True, False, "Edit data: Outdated timestamp")
+        print_result(True, False, "Edit data: Outdated timestamp: " + str(response.text.strip()))
     
     # Restricted data access without proper parameters
-    response = requests.get(f"{SERVER_ADDRESS}/getData?id={id}&timestamp={timestamp-60}")
-    if response.status_code == 200:
-        print_result(False, True, "Get data: Accessing restricted data without proper access parameters")
+    timestamp = get_timestamp()
+    if get_data(id,timestamp).status_code == 200:
+        print_result(False, True, "Get data: Accessing restricted data without proper access parameters: " + str(response.text.strip()))
     else:
-        print_result(True, False, "Get data: Accessing restricted data without proper access parameters")
+        print_result(True, False, "Get data: Accessing restricted data without proper access parameters: " + str(response.text.strip()))
 
     # Attempt to set restricted variable name
-    response = requests.get(f"{SERVER_ADDRESS}/editData?id={id}&key=ClientLatestDataUpdate&val=17&timestamp={timestamp}&hash=wronghash")
+    response = edit_data(id,'ClientLatestDataUpdate','17',timestamp,hash_key)
     if response.status_code == 200:
-        print_result(False, True, "Edit data: Setting forbidden / restricted variable name")
+        print_result(False, True, "Edit data: Setting forbidden / restricted variable name: " + str(response.text.strip()))
     else:
-        print_result(True, False, "Edit data: Setting forbidden / restricted variable name")
+        print_result(True, False, "Edit data: Setting forbidden / restricted variable name: " + str(response.text.strip()))
+
+
+
+
+
 
     # Finally finish with functioning response
     print("\nFinal restricted data case:")
-    hashVal = generate_hash(id, f"id={id}&key=FinalClientTest&val=True&timestamp={timestamp}", hash_key)
-    response = requests.get(f"{SERVER_ADDRESS}/editData?id={id}&key=FinalClientTest&val=True&timestamp={timestamp}&hash={hashVal}")
+    response = edit_data(id,'FinalClientTest','True',timestamp, hash_key)
     if response.status_code == 200:
-        print_result(True, True, "Edit data: Correctly formatted restricted value change")
+        print_result(True, True, "Edit data: Correctly formatted restricted value change: " + str(response.text.strip()))
     else:
-        print_result(False, False, "Edit data: Correctly formatted restricted value change")
+        print_result(False, False, "Edit data: Correctly formatted restricted value change: " + str(response.text.strip()))
 
-
-if __name__ == "__main__":
-    discover_server()
-    test_api()
+    
+discover_server()
+test_api()

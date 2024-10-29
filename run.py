@@ -39,17 +39,12 @@ def run_server_checks():
             break
         if "Get new ID:" in line:
             id = line.split(": ")[3].split(" ")[0]
-            DataPath = DATA_DIR + "KEYVAL" + id + ".json"
-            KeysPath = KEYS_DIR + id + ".key"
-            ClientPath = CLIENT_DIR + "Client_" + id + "/"
             print("\n\n")
-            print("DETECTED ID: " + id)
-            print("Must remove path: " + DataPath)
-            print("Must remove path: " + KeysPath)
-            print("Must remove path: " + ClientPath)
-            os.remove(DataPath)
-            os.remove(KeysPath)
-            shutil.rmtree(ClientPath)
+            print("REMOVING ID: " + id)
+            os.remove(DATA_DIR + f"KEYVAL{id}.json")
+            os.remove(DATA_DIR + f"ACCESS_{id}.txt")
+            os.remove(KEYS_DIR + f"{id}.key")
+            shutil.rmtree(CLIENT_DIR + f"Client_{id}/")
             print("\n\n")
 
     process.stdout.close()

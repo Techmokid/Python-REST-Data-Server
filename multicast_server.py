@@ -1,3 +1,7 @@
+if __name__ == "__main__":
+    import run
+    exit()
+
 import socket
 import struct
 import json

@@ -16,6 +16,8 @@ KEYS_DIR = "Stored API Keys/"
 FTP_DIR =  "Client FTP/"
 LOGS_DIR = "Logs/"
 
+FORBIDDEN_VARS = ["ClientLatestDataUpdate","last_communication"]
+
 # Set up directories
 for dir_path in [DATA_DIR, KEYS_DIR, LOGS_DIR, FTP_DIR]:
     os.makedirs(dir_path, exist_ok=True)
@@ -101,6 +103,7 @@ def new_id():
 @app.route('/editData', methods=['POST'])
 def edit_data():
     params = {k: request.form.get(k) for k in ['id', 'key', 'val', 'timestamp', 'hash']}
+    
     if any(v is None for v in params.values()):
         return jsonify({'message': 'Missing parameters'}), 403
     
@@ -114,6 +117,10 @@ def edit_data():
     paramHashData = '&'.join(f"{k}={params[k]}" for k in params if k != 'hash')
     if not verify_hash(params['id'], paramHashData, params['hash']):
         return jsonify({'message': 'Hash verification failed'}), 403
+
+    # Check for forbidden variable names
+    if params['key'] in FORBIDDEN_VARS:
+        return jsonify({'message': 'This key is forbidden'}), 403
 
     with open(data_file, 'r+') as f:
         data = json.load(f)
@@ -130,28 +137,62 @@ def edit_data():
 @app.route('/getData', methods=['GET'])
 def get_data():
     id = request.args.get('id')
-    if not id:
-        #all_data = {f.split('.')[0]: json.load(open(os.path.join(DATA_DIR, f)))
-        #            for f in os.listdir(DATA_DIR) if f.endswith('.json')}
-        all_data = "{\"error code\":\"No id given\"}"
-        return jsonify(all_data), 400
+    timestamp = request.args.get('timestamp')
+    provided_hash = request.args.get('hash')
     
+    if not id:
+        return jsonify("{\"Error\":\"No id given\"}"), 400
+
+    # ID was given
     try:
         with open(os.path.join(DATA_DIR, f"KEYVAL{id}.json"), 'r') as f:
             data = json.load(f)
+
+        # If not restricted access, just return the data no problems
+        if data.get("RestrictAccess") != "True":
+            return jsonify(data), 200
+        
+        # If restricted access, only allow access if they pass hash tests
+        if (timestamp == None) or (provided_hash == None):
+            return jsonify({"Error": "Restricted access to client data, missing hash or timestamp"}), 403
+        return jsonify(data), 200
+    
+        paramsHashData = '&'.join(f"{k}={params[k]}" for k in params if k != 'hash')
+        if not verify_hash(id,paramsHashData,provided_hash):
+            return jsonify({"Error": "Restricted access to client data, invalid hash"}), 403
+        
         return jsonify(data), 200
     except FileNotFoundError:
-        return jsonify({'message': f'ID {id} not found'}), 403
-        
+        return jsonify({'message': f'ID {id} not found'}), 400
 
-#@app.route('/getFileList', methods=['GET'])
-#def get_file_list():
-#    id = request.args.get('id')
-#    client_ftp_dir = os.path.join(FTP_DIR, f"Client_{id}")
-#    if not os.path.exists(client_ftp_dir):
-#        return jsonify({'message': 'Client FTP directory does not exist'}), 403
-#    files = os.listdir(client_ftp_dir)
-#    return jsonify({'files': files}), 200
+
+
+
+
+
+
+
+
+
+
+
+# --------------------------------------------------------------------------------
+# --------------                                                    --------------
+# --------------                                                    --------------
+# --------------                FTP Server Functions                --------------
+# --------------                                                    --------------
+# --------------                                                    --------------
+# --------------------------------------------------------------------------------
+@app.route('/getFileList', methods=['GET'])
+def get_file_list():
+    id = request.args.get('id')
+    
+    client_ftp_dir = os.path.join(FTP_DIR, f"Client_{id}")
+    if not os.path.exists(client_ftp_dir):
+        return jsonify({'message': 'Client FTP directory does not exist'}), 403
+    
+    files = os.listdir(client_ftp_dir)
+    return jsonify({'files': files}), 200
 
 
 
