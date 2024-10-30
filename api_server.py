@@ -32,7 +32,7 @@ def writeToLogFile(stringToSave):
 writeToLogFile("Starting up...")
 
 def run():
-    app.run(host='0.0.0.0', port=80)
+    app.run(host='::', port=8080)
 
 
 

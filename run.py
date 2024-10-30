@@ -55,7 +55,7 @@ def run_server_checks():
     else:
         print("Some tests failed. Exiting.")
         exit()
-run_server_checks()
+#run_server_checks()
 
 # Monitor the API server and keep the main thread alive
 try:

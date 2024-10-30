@@ -24,7 +24,8 @@ import json
 import struct
 from colorama import Fore, Style, init
 
-SERVER_ADDRESS = "http://127.0.0.1"  # Replace with your server's IP if it's hosted remotely
+SERVER_ADDRESS = "http://[2406:2d40:2031:8100::1001]:8080"
+#SERVER_ADDRESS = "http://localhost:8080"
 MULTICAST_GROUP = '224.0.0.0'
 MULTICAST_PORT = 5007
 
@@ -36,7 +37,7 @@ def discover_server():
     sock.settimeout(2)
     ttl = struct.pack('b', 1)
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
-    
+
     try:
         sock.sendto(message.encode('utf-8'), (MULTICAST_GROUP, MULTICAST_PORT))
         #print(f"Sent discovery message to {MULTICAST_GROUP}:{MULTICAST_PORT}")
@@ -44,6 +45,7 @@ def discover_server():
         data, server = sock.recvfrom(1024)
         response = json.loads(data.decode('utf-8'))
         SERVER_ADDRESS = 'http://' + response['ip']
+        print(f"Found multicast signal: {SERVER_ADDRESS}")
     except socket.timeout:
         print("No multicast response received. Falling back on default localhost\n")
     except OSError as e:
@@ -81,7 +83,7 @@ def edit_data(id, key, val, timestamp, hash_key):
         'hash': calculated_hash
     }
     
-    response = requests.post("http://localhost:80/editData", data=data)
+    response = requests.post(f"{SERVER_ADDRESS}/editData", data=data)
     #print("Edit Data Response:", response.status_code, response.text)
     return response
 
@@ -229,6 +231,7 @@ def test_api():
     else:
         print_result(False, False, "Edit data: Correctly formatted restricted value change: " + str(response.text.strip()))
 
-    
-discover_server()
+
+print("Discovering...")
+#discover_server()
 test_api()
