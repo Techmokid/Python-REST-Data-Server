@@ -73,7 +73,7 @@ def log_client_access(id, ip):
 # Define API Routes
 @app.route('/')
 def user_interface():
-    return render_template_string("<h1>This website is an API endpoint</h1>"), 404
+    return render_template_string("<h1>This website is andreys API endpoint</h1>"), 404
 
 @app.route('/getTimestamp')
 def get_timestamp():
