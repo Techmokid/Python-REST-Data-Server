@@ -2,12 +2,10 @@
     "Server Ip Addresses": [
         {
             "ip": "192.168.1.1",
-            "hostname": "server1.local",
-            "location": "datacenter_1",
             "Public IPv6": "2406:2d40:2031:8100:70ca:ebc2:2f55:5037",
             "Local IPv6": "fe80::a6c4:d86c:5995:e927",
             "Port": 8080,
-            "Last Updated": "2024-11-07 17:27:37.888000"
+            "Last Updated": "2024-11-07 17:33:49.767947"
         }
     ]
 }
