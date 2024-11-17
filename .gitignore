@@ -1,5 +1,5 @@
-Stored API Data/
-Stored API Keys/
-Logs/
-__pycache__/
-Client FTP/
+Server/Stored API Data/
+Server/Stored API Keys/
+Server/Logs/
+Server/__pycache__/
+Server/Client FTP/

@@ -32,7 +32,10 @@ def writeToLogFile(stringToSave):
 writeToLogFile("Starting up...")
 
 def run():
-    app.run(host='::', port=8080)
+    HOST = '::'
+    PORT=8080
+    print(f"Starting host {HOST} on port {PORT}\n\n")
+    app.run(host=HOST, port=PORT)
 
 
 
@@ -48,7 +51,7 @@ def run():
 # --------------------------------------------------------------------------------
 # --------------                                                    --------------
 # --------------                                                    --------------
-# --------------             Main core Server Functions             --------------
+# --------------               Server Helper Functions              --------------
 # --------------                                                    --------------
 # --------------                                                    --------------
 # --------------------------------------------------------------------------------
@@ -69,6 +72,22 @@ def log_client_access(id, ip):
     access_file = os.path.join(DATA_DIR, f"ACCESS_{id}.txt")
     with open(access_file, 'w') as f:
         f.write(f"Last IP: {ip}\nLast Access Time: {datetime.now()}\n")
+
+
+
+
+
+
+
+
+
+# --------------------------------------------------------------------------------
+# --------------                                                    --------------
+# --------------                                                    --------------
+# --------------             Main core Server Functions             --------------
+# --------------                                                    --------------
+# --------------                                                    --------------
+# --------------------------------------------------------------------------------
 
 # Define API Routes
 @app.route('/')
@@ -186,10 +205,12 @@ def get_data():
 @app.route('/getFileList', methods=['GET'])
 def get_file_list():
     id = request.args.get('id')
+    if not id:
+        return jsonify({'message': 'Error, no id was given'}), 403
     
     client_ftp_dir = os.path.join(FTP_DIR, f"Client_{id}")
     if not os.path.exists(client_ftp_dir):
-        return jsonify({'message': 'Client FTP directory does not exist'}), 403
+        return jsonify({'message': 'Client FTP directory does not exist'}), 404
     
     files = os.listdir(client_ftp_dir)
     return jsonify({'files': files}), 200

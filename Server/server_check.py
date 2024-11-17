@@ -24,7 +24,7 @@ import json
 import struct
 from colorama import Fore, Style, init
 
-SERVER_ADDRESS = "http://[2406:2d40:2031:8100::1001]:8080"
+SERVER_ADDRESS = "http://localhost:8080"
 #SERVER_ADDRESS = "http://localhost:8080"
 MULTICAST_GROUP = '224.0.0.0'
 MULTICAST_PORT = 5007

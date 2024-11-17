@@ -2,6 +2,7 @@
 import threading, time, logging, subprocess, os, shutil
 from api_server import run as run_api_server
 from multicast_server import *
+from update_IP_addresses import *
 
 logging.basicConfig(level=logging.INFO)
 
@@ -55,12 +56,15 @@ def run_server_checks():
     else:
         print("Some tests failed. Exiting.")
         exit()
+
 #run_server_checks()
 
 # Monitor the API server and keep the main thread alive
 try:
     while True:
-        time.sleep(1)  # Keep the main thread alive
+        ip,port = update_ip_in_repo()
+        print(f"\nStarting server at http://[{ip}]:{port}\n")
+        time.sleep(60)  # Keep the main thread alive
 except KeyboardInterrupt:
     logging.info("Server shutting down...")
     #stop_multicast_server()  # Stop multicast thread
